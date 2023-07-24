@@ -4,7 +4,6 @@
 <head>
   <title>a</title>
   <script src="jquery-3.7.0.min.js"></script>
-  <script src="masonry.pkgd.min.js"></script>
   <link rel="stylesheet" href="style.css" type="text/css">
 </head>
 
@@ -22,18 +21,29 @@
   <div>
     <label>
       <span class="editor-label">JSON Pallets</span>
-      <textarea class="editor" name="palettes" value="1" id="palettes" cols="80" rows=50></textarea>
+      <textarea class="editor" name="editor_palettes" value="1" id="palettes" cols="80" rows=50></textarea>
     </label>
   </div>
 
+  <script src="common.js"></script>
   <script src="tile.js"></script>
   <script src="test.js"></script>
   <script src="class_tileset.js"></script>
   <script src="class_palette.js"></script>
   <script>
+    //
+    // DOM
+    //
     var canvas_ctx = $("#board")[0].getContext("2d")
+    var editor = $("#editor")
+    var editor_palettes = $("#palettes")
 
+    //
+    // global
+    //
     var tileset = new Tileset(tile)
+    var cur_palette = new Palette({})
+    var palettes = {}
 
     var canvas_x_max = 64
     var canvas_y_max = 64
@@ -52,27 +62,8 @@
       }
     }
 
-    const isObject = (value) => {
-      return value !== null && typeof value === 'object'
-    }
-
-    const get_first = (t) => {
-      if (Array.isArray(t)) {
-        return t[2]
-      }
-      return t
-    }
-
-    var cur_palette = new Palette({})
-
-    var palettes = {}
-    palettes_json.forEach(j => {
-      const tmp = new Palette(j)
-      palettes[tmp.id] = tmp
-    })
-
     const reflesh = () => {
-      var text = $("#editor").val()
+      var text = editor.val()
       var json = JSON.parse(text)[0]
       var x = 0
       var y = 0
@@ -158,33 +149,30 @@
       })
     }
 
-    //$("#editor").change(reflesh)
-    $("#editor").val(JSON.stringify(test_data, null, 2))
-    $("#palettes").val(JSON.stringify(palettes_json, null, 2))
-    $("#editor").on({
-      "input": reflesh
-    })
-
-    jQuery(function ($) {
-      $('#container-mas').masonry({
-        itemSelector: '.item',
-        columnWidth: 10,
-        fitWidth: true
-      })
-    })
-
-    function resolveAfter2Seconds() {
+    const post_process = () => {
       return new Promise(resolve => {
         setTimeout(() => {
           reflesh()
           resolve('resolved');
         }, 500);
-      });
+      })
+    }
+    async function asyncCall() {
+      const result = await post_process()
     }
 
-    async function asyncCall() {
-      const result = await resolveAfter2Seconds();
-    }
+    //
+    // Init
+    //
+    editor.val(JSON.stringify(test_data, null, 2))
+    editor_palettes.val(JSON.stringify(palettes_json, null, 2))
+    editor.on({
+      "input": reflesh
+    })
+    palettes_json.forEach(j => {
+      const tmp = new Palette(j)
+      palettes[tmp.id] = tmp
+    })
 
     asyncCall();
 
