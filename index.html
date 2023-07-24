@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <title>a</title>
+<script src="jquery-3.7.0.min.js"></script>
+</head>
+<body>
+    <div>
+        <p>セットした値 <span id="span2"></span></p>
+        <textarea name="editor" value="1" id="editor" cols="50" rows=5></textarea>
+        <span id="test"></span>
+    </div>
+    <canvas id="board" width="480" height="480"></canvas>
+    <script src="tile.js"></script>
+    <script>
+        const pfx = "./ChibiUltica/"
+
+        class Tileset {
+            constructor( json ) {
+                this.json = json;
+                this.width = json.tile_info[0].width;
+                this.height = json.tile_info[0].height;
+                this.sub = json["tiles-new"]
+                for(var subset of this.sub) {
+                    subset.img = new Image()
+                    subset.img.src = pfx + subset.file
+                    if(!subset.sprite_width) {
+                        subset.sprite_width = this.width
+                    }
+                    if(!subset.sprite_height) {
+                        subset.sprite_height = this.height
+                    }
+                }
+            }
+            load_from_id(id) {
+                for(var subset of this.sub) {
+                    for(var t of subset.tiles) {
+                        if(t.id == id) {
+                            return this.get_offset(subset, t.fg)
+                        }
+                    }
+                }
+            }
+            get_offset(subset, n) {
+                const xmax = parseInt(subset.img.width / subset.sprite_width)
+                const ymax = parseInt(subset.img.height / subset.sprite_height)
+                const x = (n % xmax) * subset.sprite_width
+                const y = parseInt(n / ymax) * subset.sprite_height
+                return {img:subset.img, w:subset.sprite_width, h:subset.sprite_height, x:x, y:y}
+            }
+        }
+
+        const tileset = new Tileset(tile)
+        var canvas = $("#board")[0].getContext("2d")
+
+        $("#editor").change(() => {
+            var val = $("#editor").val()
+            var e = tileset.load_from_id("t_grass_golf")
+            $('#test').text(e.x)
+            canvas.drawImage(e.img, e.x, e.y, e.w, e.h, 0, 0, e.w, e.h)
+        })
+
+    </script>
+</body>
+</html>
