@@ -1,0 +1,41 @@
+
+body {
+    background-color: #16191f;
+    color: #e5e5e5;
+}
+
+.menu {
+    display: flex;
+    flex-direction: row;
+}
+
+.editor,
+.editor-label {
+    color: #e5e5e5;
+}
+
+.editor-label {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 1.5em;
+}
+
+.editor {
+    width: 90%;
+    height: 80%;
+    padding: 8px 10px;
+    border: none;
+    border-radius: 25px;
+    background-color: #24282e;
+    color: #e5e5e5;
+    font-size: 1em;
+    line-height: 1.5;
+}
+
+.editor:focus{
+    outline: 1px solid #fff;
+}
+
+.editor::placeholder {
+    color: rgba(255,255,255,.5);
+}

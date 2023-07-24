@@ -1,65 +1,194 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
-    <title>a</title>
-<script src="jquery-3.7.0.min.js"></script>
+  <title>a</title>
+  <script src="jquery-3.7.0.min.js"></script>
+  <script src="masonry.pkgd.min.js"></script>
+  <link rel="stylesheet" href="style.css" type="text/css">
 </head>
+
 <body>
-    <div>
-        <p>セットした値 <span id="span2"></span></p>
-        <textarea name="editor" value="1" id="editor" cols="50" rows=5></textarea>
-        <span id="test"></span>
-    </div>
-    <canvas id="board" width="480" height="480"></canvas>
-    <script src="tile.js"></script>
-    <script>
-        const pfx = "./ChibiUltica/"
+  <div class="menu">
+    <label>
+      <span class="editor-label">JSON</span>
+      <textarea class="editor" name="editor" value="1" id="editor" cols="80" rows=50></textarea>
+    </label>
+    <label>
+      <span class="editor-label">Preview</span>
+      <canvas id="board" width="32" style="width:100%;"></canvas>
+    </label>
+  </div>
+  <div>
+    <label>
+      <span class="editor-label">JSON Pallets</span>
+      <textarea class="editor" name="palettes" value="1" id="palettes" cols="80" rows=50></textarea>
+    </label>
+  </div>
 
-        class Tileset {
-            constructor( json ) {
-                this.json = json;
-                this.width = json.tile_info[0].width;
-                this.height = json.tile_info[0].height;
-                this.sub = json["tiles-new"]
-                for(var subset of this.sub) {
-                    subset.img = new Image()
-                    subset.img.src = pfx + subset.file
-                    if(!subset.sprite_width) {
-                        subset.sprite_width = this.width
-                    }
-                    if(!subset.sprite_height) {
-                        subset.sprite_height = this.height
-                    }
-                }
-            }
-            load_from_id(id) {
-                for(var subset of this.sub) {
-                    for(var t of subset.tiles) {
-                        if(t.id == id) {
-                            return this.get_offset(subset, t.fg)
-                        }
-                    }
-                }
-            }
-            get_offset(subset, n) {
-                const xmax = parseInt(subset.img.width / subset.sprite_width)
-                const ymax = parseInt(subset.img.height / subset.sprite_height)
-                const x = (n % xmax) * subset.sprite_width
-                const y = parseInt(n / ymax) * subset.sprite_height
-                return {img:subset.img, w:subset.sprite_width, h:subset.sprite_height, x:x, y:y}
-            }
+  <script src="tile.js"></script>
+  <script src="test.js"></script>
+  <script src="class_tileset.js"></script>
+  <script src="class_palette.js"></script>
+  <script>
+    var canvas_ctx = $("#board")[0].getContext("2d")
+
+    var tileset = new Tileset(tile)
+
+    var canvas_x_max = 64
+    var canvas_y_max = 64
+    var canvas_sw = 32
+    var canvas_sh = 32
+
+    const set_canvas_size = (x, y, sw, sh) => {
+      if (canvas_x_max != x || canvas_y_max != y
+        || canvas_sw != sw || canvas_sh != sh) {
+        canvas_x_max = x
+        canvas_y_max = y
+        canvas_sw = sw
+        canvas_sh = sh
+        canvas_ctx.canvas.width = canvas_x_max * sw
+        canvas_ctx.canvas.height = canvas_y_max * sh
+      }
+    }
+
+    const isObject = (value) => {
+      return value !== null && typeof value === 'object'
+    }
+
+    const get_first = (t) => {
+      if (Array.isArray(t)) {
+        return t[2]
+      }
+      return t
+    }
+
+    var cur_palette = new Palette({})
+
+    var palettes = {}
+    palettes_json.forEach(j => {
+      const tmp = new Palette(j)
+      palettes[tmp.id] = tmp
+    })
+
+    const get_id_str = (c, a = []) => {
+      var f = get_first(cur_palette.get_furniture(c))
+      if (f != "null") {
+        return f
+      }
+      var t = get_first(cur_palette.get_terrain(c))
+      if (t != "null") {
+        return t
+      }
+
+      for (e of a) {
+        f = get_first(palettes[e].get_furniture(c))
+        if (f != "null") {
+          return f
         }
+        t = get_first(palettes[e].get_terrain(c))
+        if (t != "null") {
+          return t
+        }
+      }
+      return "null"
+    }
 
-        const tileset = new Tileset(tile)
-        var canvas = $("#board")[0].getContext("2d")
+    const reflesh = () => {
+      var text = $("#editor").val()
+      var json = JSON.parse(text)[0]
+      var x = 0
+      var y = 0
+      cur_palette = new Palette(json.object)
 
-        $("#editor").change(() => {
-            var val = $("#editor").val()
-            var e = tileset.load_from_id("t_grass_golf")
-            $('#test').text(e.x)
-            canvas.drawImage(e.img, e.x, e.y, e.w, e.h, 0, 0, e.w, e.h)
+      canvas_ctx.clearRect(0, 0, canvas_ctx.canvas.width, canvas_ctx.canvas.height)
+
+      var x_size = 0
+      var y_size = 0
+      for (const l of json.object.rows) {
+        x_size = x_size > l.length ? x_size : l.length
+        y_size++
+      }
+      set_canvas_size(x_size, y_size, tileset.width, tileset.height)
+
+      const draw = (canvas_ctx, e, x, y, sw, sh) => {
+        if (e.bg) {
+          canvas_ctx.drawImage(
+            e.bg.img,
+            e.bg.x, e.bg.y,
+            e.bg.w, e.bg.h,
+            x * sw + e.bg.offset_x, y * sh + e.bg.offset_y,
+            e.bg.w, e.bg.h)
+        }
+        if (e.fg) {
+          canvas_ctx.drawImage(
+            e.fg.img,
+            e.fg.x, e.fg.y,
+            e.fg.w, e.fg.h,
+            x * sw + e.fg.offset_x, y * sh + e.fg.offset_y,
+            e.fg.w, e.fg.h)
+        }
+      }
+
+      var e = tileset.load_from_id(json.object.fill_ter)
+      for (x = 0; x < canvas_x_max; x++) {
+        for (y = 0; y < canvas_y_max; y++) {
+          draw(canvas_ctx, e, x, y, tileset.width, tileset.height)
+        }
+      }
+
+      y = 0
+      json.object.rows.forEach((line) => {
+        var array = [...line]
+        x = 0
+        array.forEach(c => {
+          var e = tileset.load_from_id(get_id_str(c, ["basement_game"]))
+          draw(canvas_ctx, e, x, y, tileset.width, tileset.height)
+
+          const m = json.object.place_monster.find(m => {
+            return m.x == x && m.y == y
+          })
+          if(m) {
+            var e = tileset.load_from_id(m.monster)
+            draw(canvas_ctx, e, x, y, tileset.width, tileset.height)
+          }
+          x++
         })
+        y++
+      })
+    }
 
-    </script>
+    //$("#editor").change(reflesh)
+    $("#editor").val(JSON.stringify(test_data, null, 2))
+    $("#palettes").val(JSON.stringify(palettes_json, null, 2))
+    $("#editor").on({
+      "input": reflesh
+    })
+
+    jQuery(function ($) {
+      $('#container-mas').masonry({
+        itemSelector: '.item',
+        columnWidth: 10,
+        fitWidth: true
+      })
+    })
+
+    function resolveAfter2Seconds() {
+      return new Promise(resolve => {
+        setTimeout(() => {
+          reflesh()
+          resolve('resolved');
+        }, 500);
+      });
+    }
+
+    async function asyncCall() {
+      const result = await resolveAfter2Seconds();
+    }
+
+    asyncCall();
+
+  </script>
 </body>
+
 </html>
