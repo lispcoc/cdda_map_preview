@@ -133,7 +133,7 @@
         var array = [...line]
         x = 0
         array.forEach(c => {
-          var e = tileset.load_from_id(get_id_str(c, ["basement_game"]))
+          var e = tileset.load_from_id(get_id_str(c, json.object.palettes))
           draw(canvas_ctx, e, x, y, tileset.width, tileset.height)
 
           const m = json.object.place_monster.find(m => {
