@@ -71,29 +71,6 @@
       palettes[tmp.id] = tmp
     })
 
-    const get_id_str = (c, a = []) => {
-      var f = get_first(cur_palette.get_furniture(c))
-      if (f != "null") {
-        return f
-      }
-      var t = get_first(cur_palette.get_terrain(c))
-      if (t != "null") {
-        return t
-      }
-
-      for (e of a) {
-        f = get_first(palettes[e].get_furniture(c))
-        if (f != "null") {
-          return f
-        }
-        t = get_first(palettes[e].get_terrain(c))
-        if (t != "null") {
-          return t
-        }
-      }
-      return "null"
-    }
-
     const reflesh = () => {
       var text = $("#editor").val()
       var json = JSON.parse(text)[0]
@@ -110,6 +87,29 @@
         y_size++
       }
       set_canvas_size(x_size, y_size, tileset.width, tileset.height)
+
+      const get_id_str = (c, a = []) => {
+        var f = get_first(cur_palette.get_furniture(c))
+        if (f != "null") {
+          return f
+        }
+        var t = get_first(cur_palette.get_terrain(c))
+        if (t != "null") {
+          return t
+        }
+
+        for (e of a) {
+          f = get_first(palettes[e].get_furniture(c))
+          if (f != "null") {
+            return f
+          }
+          t = get_first(palettes[e].get_terrain(c))
+          if (t != "null") {
+            return t
+          }
+        }
+        return "null"
+      }
 
       const draw = (canvas_ctx, e, x, y, sw, sh) => {
         if (e.bg) {

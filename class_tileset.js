@@ -1,18 +1,15 @@
-const pfx = "./ChibiUltica/"
-
 class Tileset {
-    constructor( json ) {
+    constructor( json, path = "./ChibiUltica/" ) {
         this.json = json
         this.width = json.tile_info[0].width
         this.height = json.tile_info[0].height
         this.sub = []
         this.id_cache = {}
         for(var j of json["tiles-new"]) {
-            this.sub.push(new Subset(j, pfx, this.width, this.height))
+            this.sub.push(new Subset(j, path, this.width, this.height))
         }
     }
     load_from_id(id_str) {
-        var id_set = {fg: -1, bg: -1}
         var fg = -1
         var fg_offset = -1
         var fg_subset = null
@@ -51,7 +48,9 @@ class Tileset {
 
         return {
             fg: fg_subset ? this.get_offset(fg_subset, fg_offset) : null,
-            bg: bg_subset ? this.get_offset(bg_subset, bg_offset) : null
+            bg: bg_subset ? this.get_offset(bg_subset, bg_offset) : null,
+            fg_n: fg,
+            bg_n: bg
         }
     }
     get_offset(subset, n) {
@@ -90,7 +89,7 @@ class Subset {
     }
     get_id(id_str) {
         for(var t of this.tiles) {
-            if(t.id == id_str) {
+            if(Array.isArray(t.id) && t.id.find(id => id == id_str) || t.id == id_str){
                 return {fg: this.get_fgbg(t.fg), bg: this.get_fgbg(t.bg)}
             }
         }
