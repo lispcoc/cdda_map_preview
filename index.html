@@ -4,39 +4,49 @@
 <head>
   <title>a</title>
   <script src="jquery-3.7.0.min.js"></script>
+  <script src="lodash.min.js"></script>
   <link rel="stylesheet" href="style.css" type="text/css">
 </head>
 
 <body>
-  <div class="menu">
-    <label>
-      <span class="editor-label">JSON</span>
-      <textarea class="editor" name="editor" value="1" id="editor" cols="80" rows="50"></textarea>
-    </label>
-    <label>
-      <span class="editor-label">
-        Preview
-        <select id="tileset_list">
-          <option>ChibiUltica</option>
-          <option>MshockXotto%2B</option>
-          <option>Cuteclysm</option>
-          <option>RetroDaysTileset</option>
-        </select>
-      </span>
-      <canvas id="canvas" width="32" style="width:100%;"></canvas>
-    </label>
-  </div>
-  <div class="menu">
-    <label>
-      <span class="editor-label">JSON Pallets</span>
-      <textarea class="editor" name="editor_palettes" value="1" id="palettes" cols="80" rows="50"></textarea>
-    </label>
-    <label>
-      <span class="editor-label">furniture(クリックでコピー)</span>
-      <div id="furniture" class="palette_list"></div>
-      <span class="editor-label">terrain(クリックでコピー)</span>
-      <div id="terrain" class="palette_list"></div>
-    </label>
+  <div class="main">
+    <div class="menu">
+      <label>
+        <span class="editor-label">JSON</span>
+        <textarea class="editor" name="editor" value="1" id="editor"></textarea>
+      </label>
+    </div>
+    <div class="menu">
+      <label>
+        <span class="editor-label">
+          Preview(右クリックでコピー)
+          <select id="tileset_list">
+            <option>ChibiUltica</option>
+            <option>MshockXotto+</option>
+            <option>Cuteclysm</option>
+            <option>RetroDaysTileset</option>
+          </select>
+        </span>
+        <div class="layer-wrap">
+          <canvas id="canvas" class="canvas" width="32"></canvas>
+          <canvas id="overlay" class="canvas" width="32"></canvas>
+        </div>
+      </label>
+    </div>
+    <div class="menu">
+      <label>
+        <span class="editor-label">JSON Pallets</span>
+        <textarea class="editor" name="editor_palettes" value="1" id="palettes" cols="80" rows="50"></textarea>
+      </label>
+    </div>
+    <div class="menu">
+      <label>
+        <span class="editor-label">furniture(クリックでコピー)</span>
+        <div id="furniture" class="palette_list"></div>
+        <span class="editor-label">terrain(クリックでコピー)</span>
+        <div id="terrain" class="palette_list"></div>
+      </label>
+    </div>
   </div>
   <script src="common.js"></script>
   <script src="tile.js"></script>
@@ -48,12 +58,33 @@
     // DOM
     //
     var canvas_ctx = $("#canvas")[0].getContext("2d")
+    var overlay_ctx = $("#overlay")[0].getContext("2d")
     var editor = $("#editor")
     var editor_palettes = $("#palettes")
     var tileset_list = $("#tileset_list")
     var palettes_preview = $("#palettes_preview")
     editor.val(JSON.stringify(test_data, null, 2))
     editor_palettes.val(JSON.stringify(palettes_json, null, 2))
+    //
+    // Size
+    //
+    const canvas_resize = () => {
+      var w = $('.canvas').outerWidth()
+      var h = w * $("#canvas")[0].height / $("#canvas")[0].width
+      $('.canvas').outerHeight(h * 0.9)
+      $('.editor').outerHeight(h * 0.9)
+      $('.menu').outerHeight(h)
+    }
+    const set_canvas_size = (canvas_ctx, x, y, sw, sh) => {
+      canvas_ctx.canvas.width = x * sw
+      canvas_ctx.canvas.height = y * sh
+      overlay_ctx.canvas.width = x * sw
+      overlay_ctx.canvas.height = y * sh
+      canvas_resize()
+    }
+    $(window).on('resize',function(){
+      canvas_resize()
+    })
 
     //
     // global
@@ -63,6 +94,29 @@
     var cur_palette = new Palette({})
     var palettes = {}
     var select_char = ""
+
+    const get_id_str = (c, a = []) => {
+      var f = force_array(cur_palette.get_furniture(c))[0]
+      if (f != "null") {
+        return f
+      }
+      var t = force_array(cur_palette.get_terrain(c))[0]
+      if (t != "null") {
+        return t
+      }
+
+      for (e of a) {
+        f = force_array(palettes[e].get_furniture(c))[0]
+        if (f != "null") {
+          return f
+        }
+        t = force_array(palettes[e].get_terrain(c))[0]
+        if (t != "null") {
+          return t
+        }
+      }
+      return "null"
+    }
 
     const clip = (char) => {
       navigator.clipboard.writeText(char)
@@ -86,10 +140,6 @@
         palettes[tmp.id] = tmp
       })
 
-      const set_canvas_size = (canvas_ctx, x, y, sw, sh) => {
-        canvas_ctx.canvas.width = x * sw
-        canvas_ctx.canvas.height = y * sh
-      }
       var x_size = 0
       var y_size = 0
       for (const l of json.object.rows) {
@@ -98,28 +148,6 @@
       }
       set_canvas_size(canvas_ctx, x_size, y_size, tileset.width, tileset.height)
 
-      const get_id_str = (c, a = []) => {
-        var f = force_array(cur_palette.get_furniture(c))[0]
-        if (f != "null") {
-          return f
-        }
-        var t = force_array(cur_palette.get_terrain(c))[0]
-        if (t != "null") {
-          return t
-        }
-
-        for (e of a) {
-          f = force_array(palettes[e].get_furniture(c))[0]
-          if (f != "null") {
-            return f
-          }
-          t = force_array(palettes[e].get_terrain(c))[0]
-          if (t != "null") {
-            return t
-          }
-        }
-        return "null"
-      }
 
       var lines = []
       for (x = 0; x < x_size; x++) {
@@ -212,7 +240,8 @@
           load_tileset(tileset_list.val())
         }
       })
-      $("#canvas").on("click", e => {
+
+      const get_mouse_point = e => {
         // https://note.affi-sapo-sv.com/js-canvas-click-coordinate.php
         const rect = e.target.getBoundingClientRect();
         const viewX = e.clientX - rect.left
@@ -221,14 +250,44 @@
         const scaleHeight = $("#canvas")[0].clientHeight / $("#canvas")[0].height
         const x = parseInt(Math.floor(viewX / scaleWidth) / tileset.width)
         const y = parseInt(Math.floor(viewY / scaleHeight) / tileset.height)
+        return {x: x, y: y}
+      }
 
+      $("#overlay").on("click", e => {
+        const p = get_mouse_point(e)
         if(select_char != ""){
           var json = JSON.parse(editor.val())
-          json[0].object.rows[y] = json[0].object.rows[y].substr(0, x) + select_char + json[0].object.rows[y].substr(x + 1)
+          json[0].object.rows[p.y] = json[0].object.rows[p.y].substr(0, p.x) + select_char + json[0].object.rows[p.y].substr(p.x + 1)
           editor.val(JSON.stringify(json, null, 2))
           reflesh()
         }
       })
+
+      $("#overlay").on("contextmenu", (e) => {
+        const p = get_mouse_point(e)
+        var json = JSON.parse(editor.val())
+        select_char = json[0].object.rows[p.y].charAt(p.x)
+        reflesh()
+        return false
+      })
+      
+      $("#overlay").mouseout(() => {
+        reflesh()
+      })
+
+      $("#overlay").mousemove(_.throttle(e => {
+        const p = get_mouse_point(e)
+        reflesh()
+        overlay_ctx.rect(
+          p.x * tileset.width, p.y * tileset.height,
+          tileset.width, tileset.height
+        )
+        overlay_ctx.strokeStyle = "yellow"
+        overlay_ctx.lineWidth = 1
+        overlay_ctx.stroke()
+        var json = JSON.parse(editor.val())
+        tileset.draw(overlay_ctx, get_id_str(select_char, json[0].object.palettes), p.x, p.y, select_char)
+      }, 200))
       //
       // Init
       //
