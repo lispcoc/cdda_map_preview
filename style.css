@@ -4,6 +4,12 @@ body {
     color: #e5e5e5;
 }
 
+#palettes_preview {
+    display: grid;
+    font-size: 2em;
+    grid-template-columns: 40px 40px 40px 40px 40px 40px 40px 40px 40px 40px 40px 40px;
+}
+
 .menu {
     display: flex;
     flex-direction: row;

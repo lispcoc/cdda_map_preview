@@ -32,8 +32,8 @@
       <textarea class="editor" name="editor_palettes" value="1" id="palettes" cols="80" rows="50"></textarea>
     </label>
     <label>
-      <span class="editor-label">Preview</span>
-      <canvas id="canvas_palettes" width="32" style="width:100%;"></canvas>
+      <span class="editor-label">Preview(クリックでコピー)</span>
+      <div id="palettes_preview"></div>
     </label>
   </div>
   <script src="common.js"></script>
@@ -46,10 +46,10 @@
     // DOM
     //
     var canvas_ctx = $("#canvas")[0].getContext("2d")
-    var canvas_palettes_ctx = $("#canvas_palettes")[0].getContext("2d")
     var editor = $("#editor")
     var editor_palettes = $("#palettes")
     var tileset_list = $("#tileset_list")
+    var palettes_preview = $("#palettes_preview")
     editor.val(JSON.stringify(test_data, null, 2))
     editor_palettes.val(JSON.stringify(palettes_json, null, 2))
 
@@ -143,18 +143,43 @@
         tileset.draw(canvas_ctx, m.monster, m.x, m.y)
       })
 
-      var pellet_sprites = [[], []]
-      var pellet_fb = [[], []]
-      for(var key in cur_palette.terrain) {
-        pellet_sprites[0].push(force_array(cur_palette.terrain[key])[0])
-        pellet_fb[0].push(key)
-      }
-      for(var key in cur_palette.furniture) {
-        pellet_sprites[1].push(force_array(cur_palette.furniture[key])[0])
-        pellet_fb[1].push(key)
-      }
-      set_canvas_size(canvas_palettes_ctx, pellet_sprites[1].length, pellet_sprites.length, tileset.width, tileset.height)
-      tileset.draw_all(canvas_palettes_ctx, pellet_sprites, pellet_fb)
+      var pellet_sprites = []
+      var pellet_fb = []
+      const targets = ["terrain", "furniture"]
+      palettes_preview.empty()
+      targets.forEach(tgt => {
+        var sprites = []
+        var fb = []
+        for(var key in cur_palette[tgt]) {
+          sprites.push(force_array(cur_palette[tgt][key])[0])
+          fb.push(key)
+        }
+        json.object.palettes.forEach(pid => {
+          for(var key in palettes[pid][tgt]) {
+            const id = force_array(palettes[pid][tgt][key])[0]
+            sprites.push(id)
+            fb.push(key)
+            var c = $("<canvas></canvas>")
+            var ctx = c[0].getContext("2d")
+            var key_span = $('<span></span>')
+            var c_span = $('<span></span>')
+            ctx.canvas.width = tileset.width
+            ctx.canvas.height = tileset.height
+            tileset.draw(ctx, id, 0, 0, key)
+            c.on({
+              click: function () {
+                navigator.clipboard.writeText(key)
+              }
+            })
+            key_span.append(key)
+            c_span.append(c)
+            palettes_preview.append(key_span)
+            palettes_preview.append(c_span)
+          }
+        })
+        pellet_sprites.push(sprites)
+        pellet_fb.push(fb)
+      })
     }
 
     const load_tileset = (id) => {
