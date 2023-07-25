@@ -1,72 +1,78 @@
 class Tileset {
-    constructor( json, path = "./ChibiUltica/" ) {
+    constructor(json, path = "./ChibiUltica/", onload_events = []) {
         this.json = json
         this.width = json.tile_info[0].width
         this.height = json.tile_info[0].height
         this.sub = []
+        this.tiles = {}
+        this.sprites = []
         this.id_cache = {}
+        this.valid = false
+        this.onload_events = onload_events
+        this.on_subset_load = (subset) => {
+            for(var s of this.sub){
+                if(!s.valid) {
+                    return false
+                }
+            }
+            this.build_tiles()
+            this.valid = true
+            this.onload_events.forEach(f => f(this))
+        }
         for(var j of json["tiles-new"]) {
-            this.sub.push(new Subset(j, path, this.width, this.height))
+            this.sub.push(new Subset(j, path, this.width, this.height, [this.on_subset_load]))
         }
     }
-    load_from_id(id_str) {
-        var fg = -1
-        var fg_offset = -1
-        var fg_subset = null
-        var bg = -1
-        var bg_offset = -1
-        var bg_subset = null
+    build_tiles() {
+        const force_array = (e) => {
+            if(Array.isArray(e)){
+                return e
+            }
+            return [e]
+        }
         for(var subset of this.sub) {
-            subset.update_size()
-            var set = subset.get_id(id_str)
-            if(set){
-                fg = set.fg
-                bg = set.bg
-                break
+            for(var i = 0; i < subset.size; i++){
+                this.sprites.push(new SpriteData(subset, i))
             }
         }
-
-        var start = 0
         for(var subset of this.sub) {
-            if(start + subset.size > fg){
-                fg_offset = fg - start
-                fg_subset = subset
-                break;
+            for(var tile of subset.tiles) {
+                force_array(tile.id).forEach(id => {
+                    this.tiles[id] = new TileData(tile, this.sprites)
+                })
             }
-            start += subset.size
-        }
-
-        start = 0
-        for(var subset of this.sub) {
-            if(start + subset.size > bg){
-                bg_offset = bg - start
-                bg_subset = subset
-                break;
-            }
-            start += subset.size
-        }
-
-        return {
-            fg: fg_subset ? this.get_offset(fg_subset, fg_offset) : null,
-            bg: bg_subset ? this.get_offset(bg_subset, bg_offset) : null,
-            fg_n: fg,
-            bg_n: bg
         }
     }
-    get_offset(subset, n) {
-        const x = (n % subset.xsize) * subset.sprite_width
-        const y = parseInt(n / subset.xsize) * subset.sprite_height
-        return {
-            img:subset.img,
-            w:subset.sprite_width, h:subset.sprite_height,
-            x:x, y:y,
-            offset_x: subset.sprite_offset_x, offset_y: subset.sprite_offset_y
+    is_valid() {
+        return this.valid
+    }
+    draw(canvas_ctx, id, x, y){
+        const tile = this.tiles[id]
+        if(tile){
+            if(tile.bg){
+                canvas_ctx.drawImage(
+                  tile.bg.img,
+                  tile.bg.start_x, tile.bg.start_y,
+                  tile.bg.width, tile.bg.height,
+                  x * this.width + tile.bg.offset_x, y * this.height + tile.bg.offset_y,
+                  tile.bg.width, tile.bg.height
+                )
+            }
+            if(tile.fg){
+                canvas_ctx.drawImage(
+                  tile.fg.img,
+                  tile.fg.start_x, tile.fg.start_y,
+                  tile.fg.width, tile.fg.height,
+                  x * this.width + tile.fg.offset_x, y * this.height + tile.fg.offset_y,
+                  tile.fg.width, tile.fg.height
+                )
+            }
         }
     }
 }
 
 class Subset {
-    constructor( json, path, default_w, default_h ) {
+    constructor( json, path, default_w, default_h, onload_events = [] ) {
         this.json = json
         this.tiles = json.tiles
         this.img = new Image()
@@ -78,6 +84,14 @@ class Subset {
         this.xsize = 0
         this.ysize = 0
         this.size = 0
+        this.img.onload = this.onload
+        this.valid = false
+        this.onload_events = onload_events
+    }
+    onload = () => {
+        this.update_size()
+        this.valid = true
+        this.onload_events.forEach(f => f(this))
     }
     update_size() {
         if(this.size > 0){
@@ -101,5 +115,39 @@ class Subset {
             return fgbg.sprite
         }
         return fgbg
+    }
+}
+
+class TileData {
+    constructor(json, sprites) {
+        this.fg = sprites[this.get_fgbg(json.fg)]
+        this.bg = sprites[this.get_fgbg(json.bg)]
+    }
+
+    get_fgbg(fgbg) {
+        const force_array = (fgbg) => {
+            if(Array.isArray(fgbg)){
+                return fgbg
+            }
+            return [fgbg]
+        }
+
+        var e = force_array(fgbg)[0]
+        if(isObject(e)){
+            return e.sprite
+        }
+        return e
+    }
+}
+
+class SpriteData {
+    constructor(subset, index) {
+        this.img = subset.img
+        this.start_x = (index % subset.xsize) * subset.sprite_width
+        this.start_y = parseInt(index / subset.xsize) * subset.sprite_height
+        this.width = subset.sprite_width
+        this.height = subset.sprite_height
+        this.offset_x = subset.sprite_offset_x
+        this.offset_y = subset.sprite_offset_y
     }
 }

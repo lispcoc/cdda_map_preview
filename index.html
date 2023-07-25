@@ -41,7 +41,10 @@
     //
     // global
     //
-    var tileset = new Tileset(tile)
+    const on_load_tileset = (tileset) => {
+      reflesh()
+    }
+    var tileset = new Tileset(tile, "./ChibiUltica/", [on_load_tileset])
     var cur_palette = new Palette({})
     var palettes = {}
 
@@ -63,6 +66,9 @@
     }
 
     const reflesh = () => {
+      if(!tileset.is_valid()){
+        return
+      }
       var text = editor.val()
       var json = JSON.parse(text)[0]
       var x = 0
@@ -121,10 +127,9 @@
         }
       }
 
-      var e = tileset.load_from_id(json.object.fill_ter)
       for (x = 0; x < canvas_x_max; x++) {
         for (y = 0; y < canvas_y_max; y++) {
-          draw(canvas_ctx, e, x, y, tileset.width, tileset.height)
+          tileset.draw(canvas_ctx, json.object.fill_ter, x, y)
         }
       }
 
@@ -133,15 +138,13 @@
         var array = [...line]
         x = 0
         array.forEach(c => {
-          var e = tileset.load_from_id(get_id_str(c, json.object.palettes))
-          draw(canvas_ctx, e, x, y, tileset.width, tileset.height)
+          tileset.draw(canvas_ctx, get_id_str(c, json.object.palettes), x, y)
 
           const m = json.object.place_monster.find(m => {
             return m.x == x && m.y == y
           })
           if(m) {
-            var e = tileset.load_from_id(m.monster)
-            draw(canvas_ctx, e, x, y, tileset.width, tileset.height)
+            tileset.draw(canvas_ctx, m.monster, x, y)
           }
           x++
         })
@@ -154,7 +157,7 @@
         setTimeout(() => {
           reflesh()
           resolve('resolved');
-        }, 500);
+        }, 100);
       })
     }
     async function asyncCall() {
@@ -162,19 +165,22 @@
     }
 
     //
-    // Init
+    // Set Event
     //
     editor.val(JSON.stringify(test_data, null, 2))
     editor_palettes.val(JSON.stringify(palettes_json, null, 2))
     editor.on({
       "input": reflesh
     })
+
+    //
+    // Init
+    //
     palettes_json.forEach(j => {
       const tmp = new Palette(j)
       palettes[tmp.id] = tmp
     })
-
-    asyncCall();
+    reflesh()
 
   </script>
 </body>
