@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html dir="ltr" lang="ja">
 
 <head>
   <title>a</title>
@@ -14,7 +14,15 @@
       <textarea class="editor" name="editor" value="1" id="editor" cols="80" rows="50"></textarea>
     </label>
     <label>
-      <span class="editor-label">Preview</span>
+      <span class="editor-label">
+        Preview
+        <select id="tileset_list">
+          <option>ChibiUltica</option>
+          <option>MshockXotto%2B</option>
+          <option>Cuteclysm</option>
+          <option>RetroDaysTileset</option>
+        </select>
+      </span>
       <canvas id="canvas" width="32" style="width:100%;"></canvas>
     </label>
   </div>
@@ -28,7 +36,6 @@
       <canvas id="canvas_palettes" width="32" style="width:100%;"></canvas>
     </label>
   </div>
-
   <script src="common.js"></script>
   <script src="tile.js"></script>
   <script src="test.js"></script>
@@ -42,24 +49,20 @@
     var canvas_palettes_ctx = $("#canvas_palettes")[0].getContext("2d")
     var editor = $("#editor")
     var editor_palettes = $("#palettes")
+    var tileset_list = $("#tileset_list")
+    editor.val(JSON.stringify(test_data, null, 2))
+    editor_palettes.val(JSON.stringify(palettes_json, null, 2))
 
     //
     // global
     //
-    const on_load_tileset = (tileset) => {
-      reflesh()
-    }
-    var tileset = new Tileset(tile, "./ChibiUltica/", [on_load_tileset])
+    const url_pre = "https://raw.githubusercontent.com/CleverRaven/Cataclysm-DDA/master/gfx/"
+    var tileset = null
     var cur_palette = new Palette({})
     var palettes = {}
 
-    const set_canvas_size = (canvas_ctx, x, y, sw, sh) => {
-      canvas_ctx.canvas.width = x * sw
-      canvas_ctx.canvas.height = y * sh
-    }
-
     const reflesh = () => {
-      if(!tileset.is_valid()){
+      if(!tileset || !tileset.is_valid()){
         return
       }
       var text = editor.val()
@@ -76,8 +79,10 @@
         palettes[tmp.id] = tmp
       })
 
-      canvas_ctx.clearRect(0, 0, canvas_ctx.canvas.width, canvas_ctx.canvas.height)
-
+      const set_canvas_size = (canvas_ctx, x, y, sw, sh) => {
+        canvas_ctx.canvas.width = x * sw
+        canvas_ctx.canvas.height = y * sh
+      }
       var x_size = 0
       var y_size = 0
       for (const l of json.object.rows) {
@@ -117,6 +122,7 @@
         }
         lines.push(line)
       }
+      canvas_ctx.clearRect(0, 0, canvas_ctx.canvas.width, canvas_ctx.canvas.height)
       tileset.draw_all(canvas_ctx, lines)
 
       y = 0
@@ -151,22 +157,47 @@
       tileset.draw_all(canvas_palettes_ctx, pellet_sprites, pellet_fb)
     }
 
-    //
-    // Set Event
-    //
-    editor.val(JSON.stringify(test_data, null, 2))
-    editor_palettes.val(JSON.stringify(palettes_json, null, 2))
-    editor.on({
-      "input": reflesh
-    })
-    editor_palettes.on({
-      "input": reflesh
-    })
+    const load_tileset = (id) => {
+      jQuery.ajax({
+        type: 'get',
+        dataType:'text',
+        cache: false,
+        url: url_pre + tileset_list.val() + "/tile_config.json"
+      }).done((data) => {
+        console.log("ajax success ", tileset_list.val())
+        tileset = new Tileset(JSON.parse(data), url_pre + tileset_list.val() + "/", [reflesh])
+      }).fail((jqXHR, textStatus, errorThrown) => {
+        console.log("Error in ajax");
+        console.log("jqXHR          : " + jqXHR.status)
+        console.log("textStatus     : " + textStatus)
+        console.log("errorThrown    : " + errorThrown.message)
+        console.log("URL            : " + url)
+        tileset = new Tileset(default_tileset_json, "ChibiUltica" + "/", [reflesh])
+      })
+    }
 
-    //
-    // Init
-    //
-    reflesh()
+    const main = () => {
+      //
+      // Set Event
+      //
+      editor.on({
+        input: reflesh
+      })
+      editor_palettes.on({
+        input: reflesh
+      })
+      tileset_list.on({
+        change: function(){
+          load_tileset(tileset_list.val())
+        }
+      })
+      //
+      // Init
+      //
+      load_tileset(tileset_list.val())
+    }
+
+    main()
 
   </script>
 </body>

@@ -1,4 +1,4 @@
-const tile = {
+const default_tileset_json = {
     "tile_info": [
       {
         "pixelscale": 1,
