@@ -127,41 +127,31 @@
         }
       }
 
+      var lines = []
       for (x = 0; x < canvas_x_max; x++) {
+        var line = []
         for (y = 0; y < canvas_y_max; y++) {
-          tileset.draw(canvas_ctx, json.object.fill_ter, x, y)
+          line.push(json.object.fill_ter)
         }
+        lines.push(line)
       }
+      tileset.draw_all(canvas_ctx, lines)
 
       y = 0
       json.object.rows.forEach((line) => {
         var array = [...line]
         x = 0
         array.forEach(c => {
-          tileset.draw(canvas_ctx, get_id_str(c, json.object.palettes), x, y)
-
-          const m = json.object.place_monster.find(m => {
-            return m.x == x && m.y == y
-          })
-          if(m) {
-            tileset.draw(canvas_ctx, m.monster, x, y)
-          }
+          lines[y][x] = get_id_str(c, json.object.palettes)
           x++
         })
         y++
       })
-    }
+      tileset.draw_all(canvas_ctx, lines)
 
-    const post_process = () => {
-      return new Promise(resolve => {
-        setTimeout(() => {
-          reflesh()
-          resolve('resolved');
-        }, 100);
+      json.object.place_monster.forEach(m => {
+        tileset.draw(canvas_ctx, m.monster, m.x, m.y)
       })
-    }
-    async function asyncCall() {
-      const result = await post_process()
     }
 
     //
