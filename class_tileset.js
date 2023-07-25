@@ -57,21 +57,16 @@ class Tileset {
         )
         
     }
-    draw_all(canvas_ctx, a = [[]], offset_x = 0, offset_y = 0){
+    draw_all(canvas_ctx, a = [[]], fb = [[]], offset_x = 0, offset_y = 0){
         const compare_safe = (a, y1, x1, y2, x2, target = "fg") => {
-            if(!Array.isArray(a[y1])){
-                return false
+            if(this.tiles[get_2d_safe(a, y1, x1)] && this.tiles[get_2d_safe(a, y2, x2)]){
+                if(Array.isArray(this.tiles[get_2d_safe(a, y1, x1)][target]) &&
+                    Array.isArray(this.tiles[get_2d_safe(a, y2, x2)][target])){
+                    return this.tiles[get_2d_safe(a, y1, x1)][target][0] ==
+                            this.tiles[get_2d_safe(a, y2, x2)][target][0]
+                    }
             }
-            if(x1 > a[y1].length || x1 < 0 || !this.tiles[a[y1][x1]] || !Array.isArray(this.tiles[a[y1][x1]][target])){
-                return false
-            }
-            if(!Array.isArray(a[y2])){
-                return false
-            }
-            if(x2 > a[y2].length || x2 < 0 || !this.tiles[a[y2][x2]] || !Array.isArray(this.tiles[a[y2][x2]][target])){
-                return false
-            }
-            return this.tiles[a[y1][x1]][target][0] == this.tiles[a[y2][x2]][target][0]
+            return false
         }
 
         for(var y = 0; y < a.length; y++) {
@@ -85,11 +80,11 @@ class Tileset {
                 if(compare_safe(a, y, x, y + 1, x - 1)) {connect |= DIR_DL}
                 if(compare_safe(a, y, x, y + 1, x + 1)) {connect |= DIR_DR}
                 if(compare_safe(a, y, x, y - 1, x + 1)) {connect |= DIR_UR}
-                this.draw(canvas_ctx, a[y][x], x + offset_x, y + offset_y, connect)
+                this.draw(canvas_ctx, a[y][x], x + offset_x, y + offset_y, get_2d_safe(fb, y, x), connect)
             }
         }
     }
-    draw(canvas_ctx, id, x, y, connect = DIR_NO){
+    draw(canvas_ctx, id, x, y, fb = "", connect = DIR_NO){
         const tile = this.tiles[id]
         if(tile){
             const fg = tile.connected_sprite("fg", connect)
@@ -112,6 +107,20 @@ class Tileset {
                   fg.width, fg.height
                 )
             }
+        } else if(id != "null" && fb) {
+            canvas_ctx.font = this.width + 'px bold Consolas'
+            canvas_ctx.textAlign = "start"
+            canvas_ctx.textBaseline = "top";
+            canvas_ctx.fillStyle = "yellow"
+            canvas_ctx.fillText(
+                fb,
+                x * this.width, y * this.height
+            )
+            canvas_ctx.fillStyle = "black"
+            canvas_ctx.strokeText(
+                fb,
+                x * this.width, y * this.height
+            )
         }
     }
 }

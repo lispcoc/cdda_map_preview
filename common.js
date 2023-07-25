@@ -1,8 +1,15 @@
-const get_first = (t) => {
-    if (Array.isArray(t)) {
-      return t[2]
-    }
-    return t
+const get_2d_safe = (a, x, y) => {
+  if (Array.isArray(a) && a[x] && a[x][y]) {
+    return a[x][y]
+  }
+  return null
+}
+
+const force_array = (a) => {
+  if(Array.isArray(a)){
+      return a
+  }
+  return [a]
 }
 
 const isObject = (value) => {

@@ -22,7 +22,7 @@ body {
 
 .editor {
     width: 90%;
-    height: 80%;
+    height: 640px;
     padding: 8px 10px;
     border: none;
     border-radius: 25px;
