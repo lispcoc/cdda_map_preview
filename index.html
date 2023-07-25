@@ -62,17 +62,18 @@
     var tileset = null
     var cur_palette = new Palette({})
     var palettes = {}
+    var select_char = ""
 
-    const clip = (key) => {
-      navigator.clipboard.writeText(key)
+    const clip = (char) => {
+      navigator.clipboard.writeText(char)
+      select_char = char
     }
 
     const reflesh = () => {
       if(!tileset || !tileset.is_valid()){
         return
       }
-      var text = editor.val()
-      var json = JSON.parse(text)[0]
+      var json = JSON.parse(editor.val())[0]
       var x = 0
       var y = 0
       cur_palette = new Palette(json.object)
@@ -157,7 +158,6 @@
       for(const tgt of targets){
         $("#" + tgt).empty()
         for(const p of palettes_array){
-          console.log(p)
           for(const key in p[tgt]) {
             const id = force_array(p[tgt][key])[0]
             var c = $('<canvas></canvas>')
@@ -196,6 +196,7 @@
       })
     }
 
+
     const main = () => {
       //
       // Set Event
@@ -209,6 +210,23 @@
       tileset_list.on({
         change: function(){
           load_tileset(tileset_list.val())
+        }
+      })
+      $("#canvas").on("click", e => {
+        // https://note.affi-sapo-sv.com/js-canvas-click-coordinate.php
+        const rect = e.target.getBoundingClientRect();
+        const viewX = e.clientX - rect.left
+        const viewY = e.clientY - rect.top
+        const scaleWidth = $("#canvas")[0].clientWidth / $("#canvas")[0].width
+        const scaleHeight = $("#canvas")[0].clientHeight / $("#canvas")[0].height
+        const x = parseInt(Math.floor(viewX / scaleWidth) / tileset.width)
+        const y = parseInt(Math.floor(viewY / scaleHeight) / tileset.height)
+
+        if(select_char != ""){
+          var json = JSON.parse(editor.val())
+          json[0].object.rows[y] = json[0].object.rows[y].substr(0, x) + select_char + json[0].object.rows[y].substr(x + 1)
+          editor.val(JSON.stringify(json, null, 2))
+          reflesh()
         }
       })
       //
