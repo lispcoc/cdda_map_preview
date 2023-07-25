@@ -5,6 +5,21 @@ const get_2d_safe = (a, x, y) => {
   return null
 }
 
+const merge_2d = (a1, a2, offset_y, offset_x) => {
+  for(var y = 0; y < a2.length; y++){
+    if(0 <= y + offset_y && y + offset_y < a1.length){
+      var line1 = [...a1[y + offset_y]]
+      var line2 = [...a2[y]]
+      for(var x = 0; x < line2.length; x++){
+        if(0 <= x + offset_x && x + offset_x < a1[y + offset_y].length){
+          line1[x + offset_x] = line2[x]
+        }
+      }
+      a1[y + offset_y] = line1.join('')
+    }
+  }
+}
+
 const force_array = (a) => {
   if(Array.isArray(a)){
       return a

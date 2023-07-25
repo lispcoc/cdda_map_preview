@@ -257,7 +257,7 @@
         const p = get_mouse_point(e)
         if(select_char != ""){
           var json = JSON.parse(editor.val())
-          json[0].object.rows[p.y] = json[0].object.rows[p.y].substr(0, p.x) + select_char + json[0].object.rows[p.y].substr(p.x + 1)
+          merge_2d(json[0].object.rows, [select_char], p.y, p.x)
           editor.val(JSON.stringify(json, null, 2))
           reflesh()
         }
