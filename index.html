@@ -32,8 +32,10 @@
       <textarea class="editor" name="editor_palettes" value="1" id="palettes" cols="80" rows="50"></textarea>
     </label>
     <label>
-      <span class="editor-label">Preview(クリックでコピー)</span>
-      <div id="palettes_preview"></div>
+      <span class="editor-label">furniture(クリックでコピー)</span>
+      <div id="furniture" class="palette_list"></div>
+      <span class="editor-label">terrain(クリックでコピー)</span>
+      <div id="terrain" class="palette_list"></div>
     </label>
   </div>
   <script src="common.js"></script>
@@ -60,6 +62,10 @@
     var tileset = null
     var cur_palette = new Palette({})
     var palettes = {}
+
+    const clip = (key) => {
+      navigator.clipboard.writeText(key)
+    }
 
     const reflesh = () => {
       if(!tileset || !tileset.is_valid()){
@@ -146,40 +152,29 @@
       var pellet_sprites = []
       var pellet_fb = []
       const targets = ["terrain", "furniture"]
-      palettes_preview.empty()
-      targets.forEach(tgt => {
-        var sprites = []
-        var fb = []
-        for(var key in cur_palette[tgt]) {
-          sprites.push(force_array(cur_palette[tgt][key])[0])
-          fb.push(key)
-        }
-        json.object.palettes.forEach(pid => {
-          for(var key in palettes[pid][tgt]) {
-            const id = force_array(palettes[pid][tgt][key])[0]
-            sprites.push(id)
-            fb.push(key)
-            var c = $("<canvas></canvas>")
+      const palettes_array = json.object.palettes.map(pid => palettes[pid])
+      palettes_array.unshift(cur_palette)
+      for(const tgt of targets){
+        $("#" + tgt).empty()
+        for(const p of palettes_array){
+          console.log(p)
+          for(const key in p[tgt]) {
+            const id = force_array(p[tgt][key])[0]
+            var c = $('<canvas></canvas>')
             var ctx = c[0].getContext("2d")
-            var key_span = $('<span></span>')
-            var c_span = $('<span></span>')
+            $("#" + tgt)
+              .append($('<span></span>')
+              .append(c
+              .attr('onclick', 'clip("' + key + '")')))
+            $("#" + tgt)
+              .append($('<span></span>')
+              .append(key))
             ctx.canvas.width = tileset.width
             ctx.canvas.height = tileset.height
             tileset.draw(ctx, id, 0, 0, key)
-            c.on({
-              click: function () {
-                navigator.clipboard.writeText(key)
-              }
-            })
-            key_span.append(key)
-            c_span.append(c)
-            palettes_preview.append(key_span)
-            palettes_preview.append(c_span)
           }
-        })
-        pellet_sprites.push(sprites)
-        pellet_fb.push(fb)
-      })
+        }
+      }
     }
 
     const load_tileset = (id) => {
