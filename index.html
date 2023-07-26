@@ -91,28 +91,19 @@
     //
     const url_pre = "https://raw.githubusercontent.com/CleverRaven/Cataclysm-DDA/master/gfx/"
     var tileset = null
-    var cur_palette = new Palette({})
+    var map_palette = new Palette({})
     var palettes = {}
-    var select_char = ""
+    var cur_palettes = [map_palette]
     var select_char_2d = null
     var drag_start = null
 
-    const get_id_str = (c, a = []) => {
-      var f = force_array(cur_palette.get_furniture(c))[0]
-      if (f != "null") {
-        return f
-      }
-      var t = force_array(cur_palette.get_terrain(c))[0]
-      if (t != "null") {
-        return t
-      }
-
-      for (e of a) {
-        f = force_array(palettes[e].get_furniture(c))[0]
+    const get_id_str = (c) => {
+      for (palette of cur_palettes) {
+        f = force_array(palette.get_furniture(c))[0]
         if (f != "null") {
           return f
         }
-        t = force_array(palettes[e].get_terrain(c))[0]
+        t = force_array(palette.get_terrain(c))[0]
         if (t != "null") {
           return t
         }
@@ -122,7 +113,7 @@
 
     const clip = (char) => {
       navigator.clipboard.writeText(char)
-      select_char = char
+      select_char_2d = [char]
     }
 
     const reflesh = () => {
@@ -132,7 +123,7 @@
       var json = JSON.parse(editor.val())[0]
       var x = 0
       var y = 0
-      cur_palette = new Palette(json.object)
+      map_palette = new Palette(json.object)
 
       var palettes_text = editor_palettes.val()
       var palettes_json = JSON.parse(palettes_text)
@@ -141,39 +132,22 @@
         const tmp = new Palette(j)
         palettes[tmp.id] = tmp
       })
+      cur_palettes = json.object.palettes.map(pid => palettes[pid])
+      cur_palettes.unshift(map_palette)
 
       var x_size = 0
-      var y_size = 0
-      for (const l of json.object.rows) {
-        x_size = x_size > l.length ? x_size : l.length
-        y_size++
-      }
+      var y_size = json.object.rows.map(r => x_size = Math.max(x_size, r.length)).length
       set_canvas_size(canvas_ctx, x_size, y_size, tileset.width, tileset.height)
-
+      canvas_ctx.clearRect(0, 0, canvas_ctx.canvas.width, canvas_ctx.canvas.height)
 
       var lines = []
-      for (x = 0; x < x_size; x++) {
-        var line = []
-        for (y = 0; y < y_size; y++) {
-          line.push(json.object.fill_ter)
-        }
-        lines.push(line)
-      }
-      canvas_ctx.clearRect(0, 0, canvas_ctx.canvas.width, canvas_ctx.canvas.height)
-      tileset.draw_all(canvas_ctx, lines)
-
-      y = 0
       var fb_lines = []
-      json.object.rows.forEach((line) => {
-        var array = [...line]
-        x = 0
-        array.forEach(c => {
-          lines[y][x] = get_id_str(c, json.object.palettes)
-          x++
-        })
-        fb_lines.push(array)
-        y++
-      })
+      lines = json.object.rows.map(r => {
+        fb_lines.push([...r])
+        return [...r]
+      }).map(a => a.map(c => get_id_str(c)))
+      var fill_ter = fb_lines.map(a => a.map(c => json.object.fill_ter))
+      tileset.draw_all(canvas_ctx, fill_ter)
       tileset.draw_all(canvas_ctx, lines, fb_lines)
 
       json.object.place_monster.forEach(m => {
@@ -183,11 +157,9 @@
       var pellet_sprites = []
       var pellet_fb = []
       const targets = ["terrain", "furniture"]
-      const palettes_array = json.object.palettes.map(pid => palettes[pid])
-      palettes_array.unshift(cur_palette)
       for(const tgt of targets){
         $("#" + tgt).empty()
-        for(const p of palettes_array){
+        for(const p of cur_palettes){
           for(const key in p[tgt]) {
             const id = force_array(p[tgt][key])[0]
             var c = $('<canvas></canvas>')
@@ -263,13 +235,9 @@
     })
 
     $("#overlay").on("contextmenu", (e) => {
-      const p = get_mouse_point(e)
-      var json = JSON.parse(editor.val())
-      select_char = json[0].object.rows[p.y].charAt(p.x)
-      reflesh()
       return false
     })
-    
+
     $("#overlay").mouseout(() => {
       reflesh()
     })
@@ -302,9 +270,8 @@
       if(drag_start){
         stroke_rect(overlay_ctx, p.x, p.y, drag_start.x, drag_start.y)
       } else if(select_char_2d) {
-        var json = JSON.parse(editor.val())
         const char_2d = select_char_2d.map(line => [...line])
-        const id_2d = char_2d.map(a => a.map(c => get_id_str(c, json[0].object.palettes)))
+        const id_2d = char_2d.map(a => a.map(c => get_id_str(c)))
         console.log(id_2d)
         tileset.draw_all(overlay_ctx, id_2d, char_2d, p.x, p.y)
         stroke_rect(overlay_ctx, p.x, p.y, p.x + id_2d[0].length - 1, p.y + id_2d.length - 1)
@@ -327,27 +294,6 @@
         }
       })
 
-      /*
-      $("#overlay").mousemove(_.throttle(e => {
-        const p = get_mouse_point(e)
-        if(e.buttons == 0) {
-          drag_start = p
-          reflesh()
-          overlay_ctx.rect(
-            p.x * tileset.width, p.y * tileset.height,
-            tileset.width, tileset.height
-          )
-          overlay_ctx.strokeStyle = "yellow"
-          overlay_ctx.lineWidth = 1
-          overlay_ctx.stroke()
-          var json = JSON.parse(editor.val())
-          tileset.draw(overlay_ctx, get_id_str(select_char, json[0].object.palettes), p.x, p.y, select_char)
-        }
-        // Right Drag
-        if(e.buttons == 2) {
-
-        }
-      }, 200))*/
       //
       // Init
       //
