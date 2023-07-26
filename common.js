@@ -11,13 +11,23 @@ const merge_2d = (a1, a2, offset_y, offset_x) => {
       var line1 = [...a1[y + offset_y]]
       var line2 = [...a2[y]]
       for(var x = 0; x < line2.length; x++){
-        if(0 <= x + offset_x && x + offset_x < a1[y + offset_y].length){
+        if(0 <= x + offset_x && x + offset_x < line1.length){
           line1[x + offset_x] = line2[x]
         }
       }
       a1[y + offset_y] = line1.join('')
     }
   }
+}
+
+const sub_2d = (a, offset_y, offset_x, size_y, size_x) => {
+  var res = []
+  for(var y = 0; y < size_y; y++){
+    if(0 <= y + offset_y && y + offset_y < a.length){
+      res.push(a[y + offset_y].substr(offset_x, size_x))
+    }
+  }
+  return res
 }
 
 const force_array = (a) => {

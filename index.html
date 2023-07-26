@@ -19,7 +19,7 @@
     <div class="menu">
       <label>
         <span class="editor-label">
-          Preview(右クリックでコピー)
+          Preview(右ドラッグでコピー)
           <select id="tileset_list">
             <option>ChibiUltica</option>
             <option>MshockXotto+</option>
@@ -94,6 +94,8 @@
     var cur_palette = new Palette({})
     var palettes = {}
     var select_char = ""
+    var select_char_2d = null
+    var drag_start = null
 
     const get_id_str = (c, a = []) => {
       var f = force_array(cur_palette.get_furniture(c))[0]
@@ -224,6 +226,90 @@
       })
     }
 
+    const stroke_rect = (ctx, x1, y1, x2, y2) => {
+      const start_x = Math.min(x1, x2)
+      const start_y = Math.min(y1, y2)
+      const end_x = Math.max(x1, x2)
+      const end_y = Math.max(y1, y2)
+      ctx.rect(
+        start_x * tileset.width, start_y * tileset.height,
+        (end_x - start_x + 1) * tileset.width, (end_y - start_y + 1) * tileset.height
+      )
+      ctx.strokeStyle = "yellow"
+      ctx.lineWidth = 1
+      ctx.stroke()
+    }
+
+    const get_mouse_point = e => {
+      // https://note.affi-sapo-sv.com/js-canvas-click-coordinate.php
+      const rect = e.target.getBoundingClientRect();
+      const viewX = e.clientX - rect.left
+      const viewY = e.clientY - rect.top
+      const scaleWidth = $("#canvas")[0].clientWidth / $("#canvas")[0].width
+      const scaleHeight = $("#canvas")[0].clientHeight / $("#canvas")[0].height
+      const x = parseInt(Math.floor(viewX / scaleWidth) / tileset.width)
+      const y = parseInt(Math.floor(viewY / scaleHeight) / tileset.height)
+      return {x: x, y: y}
+    }
+
+    $("#overlay").on("click", e => {
+      const p = get_mouse_point(e)
+      if(select_char_2d){
+        var json = JSON.parse(editor.val())
+        merge_2d(json[0].object.rows, select_char_2d, p.y, p.x)
+        editor.val(JSON.stringify(json, null, 2))
+        reflesh()
+      }
+    })
+
+    $("#overlay").on("contextmenu", (e) => {
+      const p = get_mouse_point(e)
+      var json = JSON.parse(editor.val())
+      select_char = json[0].object.rows[p.y].charAt(p.x)
+      reflesh()
+      return false
+    })
+    
+    $("#overlay").mouseout(() => {
+      reflesh()
+    })
+
+    $("#overlay").mousedown((e) => {
+      if(e.buttons == 2){
+        const p = get_mouse_point(e)
+        drag_start = p
+        reflesh()
+      }
+    })
+
+    $("#overlay").mouseup((e) => {
+      const p = get_mouse_point(e)
+      if(drag_start){
+        const start_x = Math.min(p.x, drag_start.x)
+        const start_y = Math.min(p.y, drag_start.y)
+        const end_x = Math.max(p.x, drag_start.x)
+        const end_y = Math.max(p.y, drag_start.y)
+        var json = JSON.parse(editor.val())
+        select_char_2d = sub_2d(json[0].object.rows, start_y, start_x, (end_y - start_y + 1), (end_x - start_x + 1))
+        drag_start = null
+      }
+      reflesh()
+    })
+
+    $("#overlay").mousemove(_.throttle(e => {
+      const p = get_mouse_point(e)
+      reflesh()
+      if(drag_start){
+        stroke_rect(overlay_ctx, p.x, p.y, drag_start.x, drag_start.y)
+      } else if(select_char_2d) {
+        var json = JSON.parse(editor.val())
+        const char_2d = select_char_2d.map(line => [...line])
+        const id_2d = char_2d.map(a => a.map(c => get_id_str(c, json[0].object.palettes)))
+        console.log(id_2d)
+        tileset.draw_all(overlay_ctx, id_2d, char_2d, p.x, p.y)
+        stroke_rect(overlay_ctx, p.x, p.y, p.x + id_2d[0].length - 1, p.y + id_2d.length - 1)
+      }
+    }, 100))
 
     const main = () => {
       //
@@ -241,53 +327,27 @@
         }
       })
 
-      const get_mouse_point = e => {
-        // https://note.affi-sapo-sv.com/js-canvas-click-coordinate.php
-        const rect = e.target.getBoundingClientRect();
-        const viewX = e.clientX - rect.left
-        const viewY = e.clientY - rect.top
-        const scaleWidth = $("#canvas")[0].clientWidth / $("#canvas")[0].width
-        const scaleHeight = $("#canvas")[0].clientHeight / $("#canvas")[0].height
-        const x = parseInt(Math.floor(viewX / scaleWidth) / tileset.width)
-        const y = parseInt(Math.floor(viewY / scaleHeight) / tileset.height)
-        return {x: x, y: y}
-      }
-
-      $("#overlay").on("click", e => {
-        const p = get_mouse_point(e)
-        if(select_char != ""){
-          var json = JSON.parse(editor.val())
-          merge_2d(json[0].object.rows, [select_char], p.y, p.x)
-          editor.val(JSON.stringify(json, null, 2))
-          reflesh()
-        }
-      })
-
-      $("#overlay").on("contextmenu", (e) => {
-        const p = get_mouse_point(e)
-        var json = JSON.parse(editor.val())
-        select_char = json[0].object.rows[p.y].charAt(p.x)
-        reflesh()
-        return false
-      })
-      
-      $("#overlay").mouseout(() => {
-        reflesh()
-      })
-
+      /*
       $("#overlay").mousemove(_.throttle(e => {
         const p = get_mouse_point(e)
-        reflesh()
-        overlay_ctx.rect(
-          p.x * tileset.width, p.y * tileset.height,
-          tileset.width, tileset.height
-        )
-        overlay_ctx.strokeStyle = "yellow"
-        overlay_ctx.lineWidth = 1
-        overlay_ctx.stroke()
-        var json = JSON.parse(editor.val())
-        tileset.draw(overlay_ctx, get_id_str(select_char, json[0].object.palettes), p.x, p.y, select_char)
-      }, 200))
+        if(e.buttons == 0) {
+          drag_start = p
+          reflesh()
+          overlay_ctx.rect(
+            p.x * tileset.width, p.y * tileset.height,
+            tileset.width, tileset.height
+          )
+          overlay_ctx.strokeStyle = "yellow"
+          overlay_ctx.lineWidth = 1
+          overlay_ctx.stroke()
+          var json = JSON.parse(editor.val())
+          tileset.draw(overlay_ctx, get_id_str(select_char, json[0].object.palettes), p.x, p.y, select_char)
+        }
+        // Right Drag
+        if(e.buttons == 2) {
+
+        }
+      }, 200))*/
       //
       // Init
       //
