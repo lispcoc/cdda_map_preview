@@ -92,10 +92,13 @@
     const url_pre = "https://raw.githubusercontent.com/CleverRaven/Cataclysm-DDA/master/gfx/"
     var tileset = null
     var map_palette = new Palette({})
-    var palettes = {}
+    var all_palettes = {}
     var cur_palettes = [map_palette]
     var select_char_2d = null
     var drag_start = null
+    var _palettes_text = ""
+    var _json = {}
+    var _json_text = ""
 
     const get_id_str = (c) => {
       for (palette of cur_palettes) {
@@ -120,26 +123,55 @@
       if(!tileset || !tileset.is_valid()){
         return
       }
-      var json = JSON.parse(editor.val())[0]
-      var x = 0
-      var y = 0
+      var json = _json
+      if(_json_text != editor.val()){
+        _json_text = editor.val()
+        json = JSON.parse(editor.val())[0]
+        _json = json
+      }
+
+      // generate palettes
       map_palette = new Palette(json.object)
-
       var palettes_text = editor_palettes.val()
-      var palettes_json = JSON.parse(palettes_text)
-      palettes = {}
-      palettes_json.forEach(j => {
-        const tmp = new Palette(j)
-        palettes[tmp.id] = tmp
-      })
-      cur_palettes = json.object.palettes.map(pid => palettes[pid])
-      cur_palettes.unshift(map_palette)
+      if(_palettes_text != palettes_text) {
+        _palettes_text = palettes_text
+        var palettes_json = JSON.parse(palettes_text)
+        all_palettes = {}
+        palettes_json.forEach(j => {
+          const tmp = new Palette(j)
+          all_palettes[tmp.id] = tmp
+        })
+        cur_palettes = json.object.palettes.map(pid => all_palettes[pid])
+        cur_palettes.unshift(map_palette)
+        for(const tgt of (["terrain", "furniture"])){
+          $("#" + tgt).empty()
+          for(const p of cur_palettes){
+            for(const key in p[tgt]) {
+              const id = force_array(p[tgt][key])[0]
+              var c = $('<canvas></canvas>')
+              var ctx = c[0].getContext("2d")
+              $("#" + tgt)
+                .append($('<span></span>')
+                .append(c
+                .attr('onclick', 'clip("' + key + '")')))
+              $("#" + tgt)
+                .append($('<span></span>')
+                .append(key))
+              ctx.canvas.width = tileset.width
+              ctx.canvas.height = tileset.height
+              tileset.draw(ctx, id, 0, 0, key)
+            }
+          }
+        }
+      }
 
+      // init canvas
       var x_size = 0
       var y_size = json.object.rows.map(r => x_size = Math.max(x_size, r.length)).length
       set_canvas_size(canvas_ctx, x_size, y_size, tileset.width, tileset.height)
       canvas_ctx.clearRect(0, 0, canvas_ctx.canvas.width, canvas_ctx.canvas.height)
 
+      // draw map
       var lines = []
       var fb_lines = []
       lines = json.object.rows.map(r => {
@@ -154,29 +186,6 @@
         tileset.draw(canvas_ctx, m.monster, m.x, m.y)
       })
 
-      var pellet_sprites = []
-      var pellet_fb = []
-      const targets = ["terrain", "furniture"]
-      for(const tgt of targets){
-        $("#" + tgt).empty()
-        for(const p of cur_palettes){
-          for(const key in p[tgt]) {
-            const id = force_array(p[tgt][key])[0]
-            var c = $('<canvas></canvas>')
-            var ctx = c[0].getContext("2d")
-            $("#" + tgt)
-              .append($('<span></span>')
-              .append(c
-              .attr('onclick', 'clip("' + key + '")')))
-            $("#" + tgt)
-              .append($('<span></span>')
-              .append(key))
-            ctx.canvas.width = tileset.width
-            ctx.canvas.height = tileset.height
-            tileset.draw(ctx, id, 0, 0, key)
-          }
-        }
-      }
     }
 
     const load_tileset = (id) => {
@@ -272,7 +281,6 @@
       } else if(select_char_2d) {
         const char_2d = select_char_2d.map(line => [...line])
         const id_2d = char_2d.map(a => a.map(c => get_id_str(c)))
-        console.log(id_2d)
         tileset.draw_all(overlay_ctx, id_2d, char_2d, p.x, p.y)
         stroke_rect(overlay_ctx, p.x, p.y, p.x + id_2d[0].length - 1, p.y + id_2d.length - 1)
       }
