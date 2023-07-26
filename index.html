@@ -53,6 +53,7 @@
   <script src="test.js"></script>
   <script src="class_tileset.js"></script>
   <script src="class_palette.js"></script>
+  <script src="class_cata_json.js"></script>
   <script>
     //
     // DOM
@@ -126,7 +127,7 @@
       var json = _json
       if(_json_text != editor.val()){
         _json_text = editor.val()
-        json = JSON.parse(editor.val())[0]
+        json = new CataJson(editor.val()).at(0)
         _json = json
       }
 
@@ -135,12 +136,12 @@
       var palettes_text = editor_palettes.val()
       if(_palettes_text != palettes_text) {
         _palettes_text = palettes_text
-        var palettes_json = JSON.parse(palettes_text)
+        var palettes_json = new CataJson(palettes_text)
         all_palettes = {}
-        palettes_json.forEach(j => {
+        for(var j of palettes_json) {
           const tmp = new Palette(j)
           all_palettes[tmp.id] = tmp
-        })
+        }
         cur_palettes = json.object.palettes.map(pid => all_palettes[pid])
         cur_palettes.unshift(map_palette)
         for(const tgt of (["terrain", "furniture"])){
@@ -196,7 +197,7 @@
         url: url_pre + tileset_list.val() + "/tile_config.json"
       }).done((data) => {
         console.log("ajax success ", tileset_list.val())
-        tileset = new Tileset(JSON.parse(data), url_pre + tileset_list.val() + "/", [reflesh])
+        tileset = new Tileset(new CataJson(data).at(0), url_pre + tileset_list.val() + "/", [reflesh])
       }).fail((jqXHR, textStatus, errorThrown) => {
         console.log("Error in ajax");
         console.log("jqXHR          : " + jqXHR.status)
@@ -236,9 +237,9 @@
     $("#overlay").on("click", e => {
       const p = get_mouse_point(e)
       if(select_char_2d){
-        var json = JSON.parse(editor.val())
-        merge_2d(json[0].object.rows, select_char_2d, p.y, p.x)
-        editor.val(JSON.stringify(json, null, 2))
+        var json = new CataJson(editor.val())
+        merge_2d(json.at(0).object.rows, select_char_2d, p.y, p.x)
+        editor.val(json.str(null, 2))
         reflesh()
       }
     })
@@ -266,8 +267,8 @@
         const start_y = Math.min(p.y, drag_start.y)
         const end_x = Math.max(p.x, drag_start.x)
         const end_y = Math.max(p.y, drag_start.y)
-        var json = JSON.parse(editor.val())
-        select_char_2d = sub_2d(json[0].object.rows, start_y, start_x, (end_y - start_y + 1), (end_x - start_x + 1))
+        var json = new CataJson(editor.val())
+        select_char_2d = sub_2d(json.at(0).object.rows, start_y, start_x, (end_y - start_y + 1), (end_x - start_x + 1))
         drag_start = null
       }
       reflesh()

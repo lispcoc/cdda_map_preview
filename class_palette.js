@@ -6,18 +6,20 @@ class Palette {
         this.furniture = json.furniture ? json.furniture : {}
     }
     get_terrain(ch) {
-        for(const k in this.terrain) {
-            if(ch == k){
-                return this.terrain[k]
+        if(ch in this.terrain) {
+            if(Array.isArray(this.terrain[ch])){
+                return this.terrain[ch][0]
             }
+            return this.terrain[ch]
         }
         return "null"
     }
     get_furniture(ch) {
-        for(const k in this.furniture) {
-            if(ch == k){
-                return this.furniture[k]
+        if(ch in this.furniture) {
+            if(Array.isArray(this.furniture[ch])){
+                return this.furniture[ch][0]
             }
+            return this.furniture[ch]
         }
         return "null"
     }
