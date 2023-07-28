@@ -96,7 +96,8 @@
     var all_palettes = {}
     var cur_palettes = [map_palette]
     var select_char_2d = null
-    var drag_start = null
+    var l_drag_start = null
+    var r_drag_start = null
     var _palettes_text = ""
     var _json = {}
     var _json_text = ""
@@ -234,7 +235,7 @@
       return {x: x, y: y}
     }
 
-    $("#overlay").on("click", e => {
+    const on_r_click = (e) => {
       const p = get_mouse_point(e)
       if(select_char_2d){
         var json = new CataJson(editor.val())
@@ -242,6 +243,10 @@
         editor.val(json.str(null, 2))
         reflesh()
       }
+    }
+
+    $("#overlay").on("click", e => {
+      on_r_click(e)
     })
 
     $("#overlay").on("contextmenu", (e) => {
@@ -253,23 +258,29 @@
     })
 
     $("#overlay").mousedown((e) => {
+      const p = get_mouse_point(e)
       if(e.buttons == 2){
-        const p = get_mouse_point(e)
-        drag_start = p
+        r_drag_start = p
+        reflesh()
+      }
+      if(e.buttons == 1){
+        l_drag_start = p
+        on_r_click(e)
         reflesh()
       }
     })
 
     $("#overlay").mouseup((e) => {
       const p = get_mouse_point(e)
-      if(drag_start){
-        const start_x = Math.min(p.x, drag_start.x)
-        const start_y = Math.min(p.y, drag_start.y)
-        const end_x = Math.max(p.x, drag_start.x)
-        const end_y = Math.max(p.y, drag_start.y)
+      l_drag_start = null
+      if(r_drag_start){
+        const start_x = Math.min(p.x, r_drag_start.x)
+        const start_y = Math.min(p.y, r_drag_start.y)
+        const end_x = Math.max(p.x, r_drag_start.x)
+        const end_y = Math.max(p.y, r_drag_start.y)
         var json = new CataJson(editor.val())
         select_char_2d = sub_2d(json.at(0).object.rows, start_y, start_x, (end_y - start_y + 1), (end_x - start_x + 1))
-        drag_start = null
+        r_drag_start = null
       }
       reflesh()
     })
@@ -277,13 +288,16 @@
     $("#overlay").mousemove(_.throttle(e => {
       const p = get_mouse_point(e)
       reflesh()
-      if(drag_start){
-        stroke_rect(overlay_ctx, p.x, p.y, drag_start.x, drag_start.y)
+      if(r_drag_start){
+        stroke_rect(overlay_ctx, p.x, p.y, r_drag_start.x, r_drag_start.y)
       } else if(select_char_2d) {
         const char_2d = select_char_2d.map(line => [...line])
         const id_2d = char_2d.map(a => a.map(c => get_id_str(c)))
         tileset.draw_all(overlay_ctx, id_2d, char_2d, p.x, p.y)
         stroke_rect(overlay_ctx, p.x, p.y, p.x + id_2d[0].length - 1, p.y + id_2d.length - 1)
+      }
+      if(l_drag_start && (l_drag_start.x != p.x || l_drag_start.y != p.y)){
+        on_r_click(e)
       }
     }, 100))
 
