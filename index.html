@@ -26,6 +26,8 @@
             <option>Cuteclysm</option>
             <option>RetroDaysTileset</option>
           </select>
+          <span id="point">
+          </span>
         </span>
         <div class="layer-wrap">
           <canvas id="canvas" class="canvas" width="32"></canvas>
@@ -101,6 +103,7 @@
     var _palettes_text = ""
     var _json = {}
     var _json_text = ""
+    var cur_point = {x:0, y:0}
 
     const get_id_str = (c) => {
       for (palette of cur_palettes) {
@@ -156,9 +159,6 @@
                 .append($('<span></span>')
                 .append(c
                 .attr('onclick', 'clip("' + key + '")')))
-              $("#" + tgt)
-                .append($('<span></span>')
-                .append(key))
               ctx.canvas.width = tileset.width
               ctx.canvas.height = tileset.height
               tileset.draw(ctx, id, 0, 0, key)
@@ -287,8 +287,12 @@
 
     $("#overlay").mousemove(_.throttle(e => {
       const p = get_mouse_point(e)
+      if(cur_point.x != p.x || cur_point.y != p.y) {
+        cur_point = p
+        $("#point").text("(" + p.x + ", " + p.y + ")")
+      }
       reflesh()
-      if(r_drag_start){
+      if(r_drag_start) {
         stroke_rect(overlay_ctx, p.x, p.y, r_drag_start.x, r_drag_start.y)
       } else if(select_char_2d) {
         const char_2d = select_char_2d.map(line => [...line])
